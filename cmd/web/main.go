@@ -7,6 +7,11 @@ import (
 	"os"
 )
 
+type application struct {
+	Logger *slog.Logger
+	Cfg    config
+}
+
 type config struct {
 	addr      string
 	staticDir string
@@ -25,20 +30,14 @@ func main() {
 		AddSource: true,
 	}))
 
-	mux := http.NewServeMux()
-
-	fileServer := http.FileServer(http.Dir(cfg.staticDir))
-
-	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
-
-	mux.HandleFunc("GET /{$}", home) // Restrict this route to exact matches on / only.
-	mux.HandleFunc("GET /snippet/view/{id}", snippetView)
-	mux.HandleFunc("GET /snippet/create", snippetCreate)
-	mux.HandleFunc("POST /snippet/create", snippetCreatePost)
+	app := &application{
+		Logger: logger,
+		Cfg:    cfg,
+	}
 
 	logger.Info("starting server", "addr", cfg.addr)
 
-	err := http.ListenAndServe(cfg.addr, mux)
+	err := http.ListenAndServe(cfg.addr, app.routes())
 	logger.Error(err.Error())
 	os.Exit(1)
 }
