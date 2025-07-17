@@ -1,10 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"html/template"
 	"net/http"
 	"strconv"
+
+	"github.com/matth-oz/snippetbox/internal/models"
 )
 
 // Display the home page
@@ -12,22 +14,33 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	// Add custom header
 	w.Header().Add("Server", "Go")
 
-	files := []string{
-		"./ui/html/base.tmpl",
-		"./ui/html/partials/nav.tmpl",
-		"./ui/html/pages/home.tmpl",
-	}
+	snippets, err := app.Snippets.Latest()
 
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-		app.serverError(w, r, err)
-		return
-	}
-
-	err = ts.ExecuteTemplate(w, "base", nil)
 	if err != nil {
 		app.serverError(w, r, err)
 	}
+
+	for _, snippet := range snippets {
+		fmt.Fprintf(w, "%+v\n", snippet)
+
+	}
+
+	// files := []string{
+	// 	"./ui/html/base.tmpl",
+	// 	"./ui/html/partials/nav.tmpl",
+	// 	"./ui/html/pages/home.tmpl",
+	// }
+
+	// ts, err := template.ParseFiles(files...)
+	// if err != nil {
+	// 	app.serverError(w, r, err)
+	// 	return
+	// }
+
+	// err = ts.ExecuteTemplate(w, "base", nil)
+	// if err != nil {
+	// 	app.serverError(w, r, err)
+	// }
 }
 
 // Display a specific snippet
@@ -40,7 +53,17 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "Display a specific snippet ID = %d", id)
+	snippet, err := app.Snippets.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(w, r)
+		} else {
+			app.serverError(w, r, err)
+		}
+		return
+	}
+
+	fmt.Fprintf(w, "%+v", snippet)
 }
 
 // Display a form for creating a new snippet
