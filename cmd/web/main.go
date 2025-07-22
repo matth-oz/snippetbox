@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"flag"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,9 +13,10 @@ import (
 )
 
 type application struct {
-	Logger   *slog.Logger
-	Cfg      config
-	Snippets *models.SnippetModel
+	Logger        *slog.Logger
+	Cfg           config
+	Snippets      *models.SnippetModel
+	TemplateCache map[string]*template.Template
 }
 
 type config struct {
@@ -46,13 +48,19 @@ func main() {
 	}
 
 	logger.Info("DB connected", "mysql", db.Stats().OpenConnections)
-
 	defer db.Close()
 
+	templateCache, err := newTemplateCache()
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
 	app := &application{
-		Logger:   logger,
-		Cfg:      cfg,
-		Snippets: &models.SnippetModel{DB: db},
+		Logger:        logger,
+		Cfg:           cfg,
+		Snippets:      &models.SnippetModel{DB: db},
+		TemplateCache: templateCache,
 	}
 
 	logger.Info("starting server", "addr", cfg.addr)

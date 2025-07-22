@@ -1,9 +1,38 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
 	"runtime/debug"
+	"time"
 )
+
+func (app *application) newTemplateData(r *http.Request) templateData {
+	return templateData{
+		CurrentYear: time.Now().Year(),
+	}
+}
+
+func (app *application) render(w http.ResponseWriter, r *http.Request, status int, page string, data templateData) {
+
+	ts, ok := app.TemplateCache[page]
+	if !ok {
+		err := fmt.Errorf("the template %s does not exist", page)
+		app.serverError(w, r, err)
+		return
+	}
+
+	buf := new(bytes.Buffer)
+
+	err := ts.ExecuteTemplate(buf, "base", data)
+	if err != nil {
+		app.serverError(w, r, err)
+	}
+
+	w.WriteHeader(status)
+	buf.WriteTo(w)
+}
 
 // The serverError helper writes a log entry at Error level (including the request
 // method and URI as attributes), then sends a generic 500 Internal Server Error
