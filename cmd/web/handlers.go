@@ -11,8 +11,6 @@ import (
 
 // Display the home page
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
-	// Add custom header
-	w.Header().Add("Server", "Go")
 
 	snippets, err := app.Snippets.Latest()
 
